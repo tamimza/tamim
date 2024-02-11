@@ -13,7 +13,7 @@ function validateEmail(email) {
   return re.test(String(email).toLowerCase());
 }
 
-// Utility function to validate DOB format
+// Utility function to  validate DOB format
 function validateDOB(dob) {
   const re = /^\d{4}\/\d{2}\/\d{2}$/;
   return re.test(String(dob));
