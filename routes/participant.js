@@ -4,7 +4,7 @@ require("dotenv").config();
 const adminAuth = require("../middleware"); // Adjust the path if necessary
 const CyclicDB = require("@cyclic.sh/dynamodb");
 const db = CyclicDB(process.env.CYCLIC_DB);
-let participants = db.collection("Participants");
+let participants = db.collection("participants");
 
 // Utility function to validate email
 function validateEmail(email) {
