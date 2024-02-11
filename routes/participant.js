@@ -1,32 +1,72 @@
 var express = require("express");
 var router = express.Router();
 require("dotenv").config();
-const basicAuth = require("../middleware"); // Adjust the path if necessary
+const adminAuth = require("../middleware"); // Adjust the path if necessary
 const CyclicDB = require("@cyclic.sh/dynamodb");
 const db = CyclicDB(process.env.CYCLIC_DB);
-let participants = db.collection("participants");
+let participants = db.collection("Participants");
+
+// Utility function to validate email
+function validateEmail(email) {
+  const re =
+    /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@(([^<>()[\]\\.,;:\s@"]+\.)+[^<>()[\]\\.,;:\s@"]{2,})$/i;
+  return re.test(String(email).toLowerCase());
+}
+
+// Utility function to validate DOB format
+function validateDOB(dob) {
+  const re = /^\d{4}\/\d{2}\/\d{2}$/;
+  return re.test(String(dob));
+}
 
 router.post("/add", adminAuth, async (req, res) => {
-  console.log(req.dynamoDB);
   const { email, firstname, lastname, dob, active, work, home } = req.body;
 
+  // Validate required fields are present
+  if (
+    !email ||
+    !firstname ||
+    !lastname ||
+    !dob ||
+    active === undefined ||
+    !work ||
+    !home
+  ) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  // Validate email format
+  if (!validateEmail(email)) {
+    return res.status(400).json({ error: "Invalid email format" });
+  }
+
+  // Validate DOB format
+  if (!validateDOB(dob)) {
+    return res
+      .status(400)
+      .json({ error: "Invalid DOB format, expected YYYY/MM/DD" });
+  }
+
   try {
-    await req.dynamoDB
-      .put({
-        TableName: "Participants",
-        Item: { email, firstname, lastname, dob, active, work, home },
-      })
-      .promise(); // Note the use of `.promise()` to properly handle the async operation.
+    await participants.set(email, {
+      firstname,
+      lastname,
+      dob,
+      active,
+      work,
+      home,
+    });
     res.json({ message: "Participant added successfully" });
   } catch (error) {
-    console.error("DynamoDB Error:", error);
+    console.error("Error:", error);
     res.status(500).json({
       error: "Failed to add participant to the database",
-      details: error.message,
+      details: error.toString(),
     });
   }
 });
-router.get("/participants", adminAuth, async (req, res) => {
+
+router.get("/", adminAuth, async (req, res) => {
   const params = {
     TableName: "Participants",
     Item: {
@@ -49,7 +89,7 @@ router.get("/participants", adminAuth, async (req, res) => {
   }
 });
 
-router.get("/participants/details", adminAuth, async (req, res) => {
+router.get("/details", adminAuth, async (req, res) => {
   const params = {
     TableName: "Participant", // Replace with your actual table name
     ProjectionExpression: "firstname, lastname, email", // Specify the attributes you want to get
@@ -69,7 +109,7 @@ router.get("/participants/details", adminAuth, async (req, res) => {
   }
 });
 
-router.get("/participants/details/deleted", adminAuth, async (req, res) => {
+router.get("/details/deleted", adminAuth, async (req, res) => {
   const params = {
     TableName: "Participants", // Replace with your actual table name
     ProjectionExpression: "firstname, lastname, email", // Specify the attributes you want to get
@@ -89,7 +129,7 @@ router.get("/participants/details/deleted", adminAuth, async (req, res) => {
   }
 });
 
-router.get("/participants/details/:email", adminAuth, async (req, res) => {
+router.get("/details/:email", adminAuth, async (req, res) => {
   const email = req.params.email;
 
   const params = {
@@ -117,7 +157,7 @@ router.get("/participants/details/:email", adminAuth, async (req, res) => {
   }
 });
 
-router.get("/participants/work/:email", adminAuth, async (req, res) => {
+router.get("/work/:email", adminAuth, async (req, res) => {
   const email = req.params.email;
 
   const params = {
@@ -145,7 +185,7 @@ router.get("/participants/work/:email", adminAuth, async (req, res) => {
   }
 });
 
-router.get("/participants/home/:email", adminAuth, async (req, res) => {
+router.get("/home/:email", adminAuth, async (req, res) => {
   const email = req.params.email;
 
   const params = {
